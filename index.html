@@ -1,0 +1,992 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HR Recruitment Portal</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+
+:root{
+  --ink:#0d0f1a;
+  --ink2:#1e2235;
+  --indigo:#4f46e5;
+  --violet:#7c3aed;
+  --teal:#0d9488;
+  --rose:#f43f5e;
+  --amber:#f59e0b;
+  --emerald:#10b981;
+  --glass:rgba(255,255,255,0.06);
+  --glass2:rgba(255,255,255,0.10);
+  --border:rgba(255,255,255,0.12);
+  --text:#f0f4ff;
+  --muted:rgba(240,244,255,0.55);
+  --card:rgba(255,255,255,0.07);
+  --font:'DM Sans',sans-serif;
+  --serif:'DM Serif Display',serif;
+  --radius:16px;
+}
+
+html{scroll-behavior:smooth}
+
+body{
+  font-family:var(--font);
+  background:var(--ink);
+  color:var(--text);
+  min-height:100vh;
+  overflow-x:hidden;
+  position:relative;
+}
+
+/* ── CANVAS BACKGROUND ── */
+#bgCanvas{
+  position:fixed;inset:0;z-index:0;
+  pointer-events:none;
+  width:100%;height:100%;
+}
+
+/* ── GRID OVERLAY ── */
+.grid-overlay{
+  position:fixed;inset:0;z-index:0;pointer-events:none;
+  background-image:
+    linear-gradient(rgba(79,70,229,0.07) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(79,70,229,0.07) 1px,transparent 1px);
+  background-size:48px 48px;
+  mask-image:radial-gradient(ellipse 80% 80% at 50% 50%,#000 40%,transparent 100%);
+}
+
+/* ── VIGNETTE ── */
+.vignette{
+  position:fixed;inset:0;z-index:0;pointer-events:none;
+  background:radial-gradient(ellipse 120% 100% at 50% 0%,transparent 40%,rgba(13,15,26,0.7) 100%);
+}
+
+/* ── NOISE TEXTURE ── */
+.noise{
+  position:fixed;inset:0;z-index:0;pointer-events:none;
+  opacity:0.03;
+  background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+}
+
+/* ── WRAPPER ── */
+.portal-wrapper{
+  position:relative;z-index:1;
+  max-width:800px;margin:0 auto;
+  padding:48px 20px 80px;
+}
+
+/* ── HEADER ── */
+.portal-header{
+  text-align:center;margin-bottom:48px;
+  animation:slideDown .8s cubic-bezier(.22,1,.36,1) both;
+}
+
+@keyframes slideDown{
+  from{opacity:0;transform:translateY(-32px)}
+  to{opacity:1;transform:translateY(0)}
+}
+
+.header-eyebrow{
+  display:inline-flex;align-items:center;gap:8px;
+  background:var(--glass2);
+  border:1px solid var(--border);
+  backdrop-filter:blur(12px);
+  color:var(--muted);
+  font-size:11px;font-weight:500;letter-spacing:2.5px;
+  text-transform:uppercase;
+  padding:6px 18px;border-radius:99px;margin-bottom:20px;
+}
+.eyebrow-dot{
+  width:6px;height:6px;border-radius:50%;
+  background:var(--emerald);
+  box-shadow:0 0 8px var(--emerald);
+  animation:pulse 2s ease infinite;
+}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.5;transform:scale(.8)}}
+
+.portal-title{
+  font-family:var(--serif);
+  font-size:clamp(2.4rem,6vw,3.8rem);
+  font-weight:400;line-height:1.05;
+  letter-spacing:-.02em;
+  margin-bottom:12px;
+}
+.portal-title .accent{
+  font-style:italic;
+  background:linear-gradient(135deg,#818cf8,#c084fc,#fb7185);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+  background-clip:text;
+}
+.portal-subtitle{
+  color:var(--muted);font-size:15px;font-weight:300;
+  letter-spacing:.01em;margin-bottom:36px;
+}
+
+/* ── STEP PROGRESS ── */
+.step-track{
+  display:flex;align-items:center;
+  justify-content:center;gap:0;
+  max-width:480px;margin:0 auto;
+}
+.step-item{
+  display:flex;flex-direction:column;align-items:center;gap:6px;
+  flex:1;
+}
+.step-connector{
+  height:1px;flex:1;
+  background:rgba(255,255,255,0.12);
+  transition:background .5s;
+  max-width:60px;
+}
+.step-connector.filled{background:linear-gradient(90deg,var(--indigo),var(--violet))}
+
+.step-circle{
+  width:34px;height:34px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  font-size:12px;font-weight:600;
+  border:1.5px solid rgba(255,255,255,0.15);
+  background:rgba(255,255,255,0.05);
+  color:var(--muted);
+  transition:all .4s cubic-bezier(.34,1.56,.64,1);
+  position:relative;z-index:1;
+}
+.step-circle.active{
+  border-color:var(--indigo);
+  background:rgba(79,70,229,0.2);
+  color:#fff;
+  box-shadow:0 0 20px rgba(79,70,229,0.4);
+}
+.step-circle.done{
+  border-color:var(--emerald);
+  background:rgba(16,185,129,0.2);
+  color:var(--emerald);
+  box-shadow:0 0 16px rgba(16,185,129,0.3);
+}
+.step-label{
+  font-size:10px;font-weight:500;
+  color:var(--muted);letter-spacing:.05em;
+  text-transform:uppercase;
+  transition:color .3s;
+  white-space:nowrap;
+}
+.step-item.active .step-label{color:var(--text)}
+
+/* ── FORM CARD ── */
+.form-section{
+  display:none;
+  background:rgba(255,255,255,0.05);
+  backdrop-filter:blur(24px);
+  border:1px solid var(--border);
+  border-radius:24px;
+  padding:40px;
+  margin-top:32px;
+  animation:fadeUp .5s cubic-bezier(.22,1,.36,1) both;
+  box-shadow:0 0 0 1px rgba(255,255,255,0.04) inset,
+             0 40px 80px rgba(0,0,0,0.4);
+}
+.form-section.active{display:block}
+
+@keyframes fadeUp{
+  from{opacity:0;transform:translateY(20px)}
+  to{opacity:1;transform:translateY(0)}
+}
+
+.section-header{
+  display:flex;align-items:center;gap:14px;
+  margin-bottom:28px;padding-bottom:20px;
+  border-bottom:1px solid rgba(255,255,255,0.08);
+}
+.section-icon-wrap{
+  width:46px;height:46px;border-radius:12px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:1.3rem;
+  background:rgba(79,70,229,0.15);
+  border:1px solid rgba(79,70,229,0.25);
+}
+.section-title{
+  font-family:var(--serif);
+  font-size:1.5rem;font-weight:400;
+  letter-spacing:-.01em;
+}
+.section-sub{font-size:12px;color:var(--muted);margin-top:2px}
+
+/* ── GRID ── */
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+@media(max-width:580px){
+  .grid-2{grid-template-columns:1fr}
+  .form-section{padding:24px 18px}
+}
+.field-full{grid-column:1/-1}
+
+/* ── FIELD ── */
+.field-group{display:flex;flex-direction:column;gap:7px}
+.field-group label{
+  font-size:12px;font-weight:500;
+  color:rgba(240,244,255,0.65);
+  letter-spacing:.04em;text-transform:uppercase;
+}
+.req{color:var(--rose)}
+
+input[type=text],input[type=email],input[type=tel],
+input[type=date],input[type=number],input[type=url],
+select,textarea{
+  width:100%;padding:11px 15px;
+  background:rgba(255,255,255,0.05);
+  border:1px solid rgba(255,255,255,0.1);
+  border-radius:10px;
+  font-family:var(--font);font-size:14px;
+  color:var(--text);outline:none;
+  transition:border-color .2s,box-shadow .2s,background .2s;
+
+}
+input::placeholder,textarea::placeholder{color:rgba(240,244,255,0.25)}
+input:focus,select:focus,textarea:focus{
+  border-color:rgba(99,102,241,0.6);
+  box-shadow:0 0 0 3px rgba(99,102,241,0.15);
+  background:rgba(255,255,255,0.08);
+}
+input.invalid,select.invalid,textarea.invalid{
+  border-color:rgba(244,63,94,0.6);
+  box-shadow:0 0 0 3px rgba(244,63,94,0.1);
+}
+.field-error{font-size:11px;color:var(--rose);min-height:14px}
+textarea{height:76px;resize:vertical}
+select{cursor:pointer}
+select option{background:#1a1d2e;color:var(--text)}
+
+/* ── SKILLS ── */
+.skills-input-wrap{display:flex;flex-direction:column;gap:8px}
+.skills-tags{display:flex;flex-wrap:wrap;gap:6px;min-height:4px}
+.skill-tag{
+  display:inline-flex;align-items:center;gap:5px;
+  background:rgba(124,58,237,0.2);
+  border:1px solid rgba(124,58,237,0.35);
+  color:#c4b5fd;
+  font-size:11px;font-weight:500;
+  padding:4px 11px;border-radius:99px;
+  animation:popIn .2s cubic-bezier(.34,1.56,.64,1);
+}
+@keyframes popIn{
+  from{transform:scale(.5);opacity:0}
+  to{transform:scale(1);opacity:1}
+}
+.skill-tag button{
+  background:none;border:none;cursor:pointer;
+  color:#c4b5fd;font-size:13px;line-height:1;
+  padding:0;margin:0;width:auto;opacity:.7;
+  transition:opacity .15s;
+}
+.skill-tag button:hover{opacity:1}
+
+/* ── STATUS BUTTONS ── */
+.status-buttons{display:flex;gap:8px;flex-wrap:wrap;margin-top:2px}
+.status-btn{
+  flex:1;padding:10px 8px;
+  border:1px solid rgba(255,255,255,0.1);
+  border-radius:10px;
+  background:rgba(255,255,255,0.04);
+  font-family:var(--font);font-size:12px;font-weight:600;
+  cursor:pointer;transition:all .2s;
+  color:var(--muted);min-width:88px;
+  letter-spacing:.03em;
+}
+.status-btn:hover{border-color:rgba(255,255,255,0.25);color:var(--text)}
+.status-btn.pending.active{
+  background:rgba(245,158,11,0.15);border-color:rgba(245,158,11,0.4);
+  color:#fcd34d;box-shadow:0 0 14px rgba(245,158,11,0.1);
+}
+.status-btn.selected.active{
+  background:rgba(16,185,129,0.15);border-color:rgba(16,185,129,0.4);
+  color:#6ee7b7;box-shadow:0 0 14px rgba(16,185,129,0.1);
+}
+.status-btn.rejected.active{
+  background:rgba(244,63,94,0.15);border-color:rgba(244,63,94,0.4);
+  color:#fda4af;box-shadow:0 0 14px rgba(244,63,94,0.1);
+}
+
+/* ── TOGGLE ── */
+.toggle-wrap{display:flex;align-items:center;gap:12px;margin-top:4px}
+.toggle{position:relative;display:inline-block;width:48px;height:26px;flex-shrink:0}
+.toggle input{opacity:0;width:0;height:0}
+.toggle-slider{
+  position:absolute;inset:0;
+  background:rgba(255,255,255,0.1);border-radius:99px;
+  transition:.3s;cursor:pointer;
+  border:1px solid rgba(255,255,255,0.1);
+}
+.toggle-slider::before{
+  content:'';position:absolute;
+  width:20px;height:20px;left:3px;top:2px;
+  background:rgba(255,255,255,0.7);border-radius:50%;
+  transition:.3s;box-shadow:0 1px 4px rgba(0,0,0,0.4);
+}
+.toggle input:checked+.toggle-slider{
+  background:linear-gradient(135deg,var(--indigo),var(--violet));
+  border-color:transparent;
+}
+.toggle input:checked+.toggle-slider::before{
+  transform:translateX(22px);background:#fff;
+}
+.toggle-text{font-size:13px;color:var(--muted)}
+
+/* ── SAME ADDRESS ── */
+.same-address-wrap{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+.same-address-wrap input[type=checkbox]{
+  width:15px;height:15px;accent-color:var(--indigo);cursor:pointer;
+}
+.checkbox-label{font-size:12px;color:var(--muted);cursor:pointer;font-weight:500}
+
+/* ── SALARY ── */
+.salary-wrap{position:relative}
+.salary-prefix{
+  position:absolute;left:14px;top:50%;transform:translateY(-50%);
+  font-size:14px;font-weight:600;color:var(--muted);
+}
+.salary-wrap input{padding-left:26px}
+
+/* ── SUMMARY ── */
+.summary-card{
+  background:rgba(79,70,229,0.08);
+  border:1px solid rgba(99,102,241,0.25);
+  border-radius:14px;padding:20px 24px;margin-top:24px;
+}
+.summary-card h3{
+  font-size:13px;font-weight:600;color:rgba(165,180,252,0.9);
+  margin-bottom:14px;letter-spacing:.05em;text-transform:uppercase;
+}
+.summary-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px 24px}
+.summary-item{font-size:13px}
+.summary-item .s-label{color:var(--muted);font-weight:400;font-size:11px;text-transform:uppercase;letter-spacing:.04em;margin-bottom:1px}
+.summary-item .s-val{color:var(--text);font-weight:500}
+@media(max-width:480px){.summary-grid{grid-template-columns:1fr}}
+
+/* ── NAV ── */
+.step-nav{
+  display:flex;justify-content:space-between;align-items:center;
+  margin-top:32px;padding-top:24px;
+  border-top:1px solid rgba(255,255,255,0.07);
+}
+
+.btn-next,.btn-back,.btn-submit{
+  font-family:var(--font);font-weight:600;font-size:14px;
+  border:none;border-radius:12px;padding:13px 26px;
+  cursor:pointer;transition:all .22s cubic-bezier(.22,1,.36,1);
+  letter-spacing:.01em;
+}
+.btn-next{
+  background:linear-gradient(135deg,#4f46e5,#7c3aed);
+  color:#fff;
+  box-shadow:0 0 0 1px rgba(99,102,241,0.3),0 4px 20px rgba(79,70,229,0.35);
+}
+.btn-next:hover{transform:translateY(-2px);box-shadow:0 0 0 1px rgba(99,102,241,0.5),0 8px 28px rgba(79,70,229,0.45)}
+.btn-next:active{transform:translateY(0)}
+
+.btn-back{
+  background:rgba(255,255,255,0.05);
+  color:var(--muted);
+  border:1px solid rgba(255,255,255,0.1);
+}
+.btn-back:hover{background:rgba(255,255,255,0.09);color:var(--text)}
+
+.btn-submit{
+  background:linear-gradient(135deg,#0d9488,#10b981);
+  color:#fff;
+  box-shadow:0 0 0 1px rgba(16,185,129,0.3),0 4px 20px rgba(13,148,136,0.35);
+  padding:13px 32px;font-size:15px;
+}
+.btn-submit:hover{transform:translateY(-2px);box-shadow:0 0 0 1px rgba(16,185,129,0.5),0 8px 28px rgba(13,148,136,0.45)}
+.btn-submit:disabled{opacity:.5;cursor:not-allowed;transform:none}
+.btn-loader{display:inline-block}
+.hidden{display:none!important}
+
+/* ── TOAST ── */
+.toast{
+  position:fixed;bottom:32px;right:32px;
+  background:rgba(30,34,53,0.95);
+  backdrop-filter:blur(20px);
+  border:1px solid var(--border);
+  color:var(--text);padding:14px 22px;
+  border-radius:14px;font-size:14px;font-weight:500;
+  display:flex;align-items:center;gap:10px;
+  box-shadow:0 20px 50px rgba(0,0,0,0.5);
+  transform:translateY(80px);opacity:0;
+  transition:all .45s cubic-bezier(.22,1,.36,1);
+  z-index:1000;
+}
+.toast.show{transform:translateY(0);opacity:1}
+.toast-icon{font-size:1.1rem}
+
+/* ── FLOATING PARTICLES (CSS) ── */
+.particles{position:fixed;inset:0;z-index:0;pointer-events:none;overflow:hidden}
+.particle{
+  position:absolute;border-radius:50%;
+  animation:floatUp linear infinite;
+  opacity:0;
+}
+@keyframes floatUp{
+  0%{transform:translateY(0) scale(1);opacity:0}
+  10%{opacity:1}
+  90%{opacity:.4}
+  100%{transform:translateY(-100vh) scale(.4);opacity:0}
+}
+</style>
+</head>
+<body>
+
+<canvas id="bgCanvas"></canvas>
+<div class="grid-overlay"></div>
+<div class="vignette"></div>
+<div class="noise"></div>
+<div class="particles" id="particles"></div>
+
+<div class="portal-wrapper">
+
+  <!-- Header -->
+  <header class="portal-header">
+    <div class="header-eyebrow">
+      <span class="eyebrow-dot"></span>
+      HR Suite · Active
+    </div>
+    <h1 class="portal-title">Recruitment <span class="accent">Portal</span></h1>
+    <p class="portal-subtitle">Manage candidates · Track interviews · Onboard talent</p>
+
+    <!-- Step Progress -->
+    <div class="step-track" id="stepTrack">
+      <div class="step-item active" data-step="1">
+        <div class="step-circle active" id="sc1">1</div>
+        <span class="step-label">Personal</span>
+      </div>
+      <div class="step-connector" id="conn1"></div>
+      <div class="step-item" data-step="2">
+        <div class="step-circle" id="sc2">2</div>
+        <span class="step-label">Job</span>
+      </div>
+      <div class="step-connector" id="conn2"></div>
+      <div class="step-item" data-step="3">
+        <div class="step-circle" id="sc3">3</div>
+        <span class="step-label">Interview</span>
+      </div>
+      <div class="step-connector" id="conn3"></div>
+      <div class="step-item" data-step="4">
+        <div class="step-circle" id="sc4">4</div>
+        <span class="step-label">Onboarding</span>
+      </div>
+    </div>
+  </header>
+
+  <form id="hrForm" novalidate>
+
+    <!-- Step 1 -->
+    <section class="form-section active" id="step1">
+      <div class="section-header">
+        <div class="section-icon-wrap">👤</div>
+        <div>
+          <h2 class="section-title">Personal Information</h2>
+          <p class="section-sub">Candidate's basic details</p>
+        </div>
+      </div>
+      <div class="grid-2">
+        <div class="field-group">
+          <label>Full Name <span class="req">*</span></label>
+          <input type="text" id="name" placeholder="e.g. Priya Sharma" required>
+          <span class="field-error" id="nameErr"></span>
+        </div>
+        <div class="field-group">
+          <label>Email Address <span class="req">*</span></label>
+          <input type="email" id="email" placeholder="priya@example.com" required>
+          <span class="field-error" id="emailErr"></span>
+        </div>
+        <div class="field-group">
+          <label>Phone Number <span class="req">*</span></label>
+          <input type="tel" id="phone" placeholder="+91 98765 43210" required>
+          <span class="field-error" id="phoneErr"></span>
+        </div>
+        <div class="field-group">
+          <label>Gender</label>
+          <select id="gender">
+            <option value="">Select Gender</option>
+            <option>Male</option><option>Female</option>
+            <option>Other</option><option>Prefer not to say</option>
+          </select>
+        </div>
+        <div class="field-group">
+          <label>Date of Birth</label>
+          <input type="date" id="dob">
+        </div>
+        <div class="field-group field-full">
+          <label>Current Address</label>
+          <textarea id="currentAddress" placeholder="House No., Street, City, State, PIN"></textarea>
+        </div>
+        <div class="field-group field-full">
+          <label>Permanent Address</label>
+          <div class="same-address-wrap">
+            <input type="checkbox" id="sameAddress">
+            <label for="sameAddress" class="checkbox-label">Same as current address</label>
+          </div>
+          <textarea id="permanentAddress" placeholder="House No., Street, City, State, PIN"></textarea>
+        </div>
+      </div>
+      <div class="step-nav">
+        <div></div>
+        <button type="button" class="btn-next" onclick="goToStep(2)">Next: Job Details →</button>
+      </div>
+    </section>
+
+    <!-- Step 2 -->
+    <section class="form-section" id="step2">
+      <div class="section-header">
+        <div class="section-icon-wrap">💼</div>
+        <div>
+          <h2 class="section-title">Job Details</h2>
+          <p class="section-sub">Role, skills & experience</p>
+        </div>
+      </div>
+      <div class="grid-2">
+        <div class="field-group">
+          <label>Position Applied For <span class="req">*</span></label>
+          <input type="text" id="position" placeholder="e.g. Senior Developer" required>
+          <span class="field-error" id="positionErr"></span>
+        </div>
+        <div class="field-group">
+          <label>Department</label>
+          <select id="department">
+            <option value="">Select Department</option>
+            <option>Engineering</option><option>Design</option>
+            <option>Marketing</option><option>Sales</option>
+            <option>HR</option><option>Finance</option>
+            <option>Operations</option><option>Other</option>
+          </select>
+        </div>
+        <div class="field-group field-full">
+          <label>Skills</label>
+          <div class="skills-input-wrap">
+            <input type="text" id="skillInput" placeholder="Type a skill and press Enter (e.g. React, Python)">
+            <div class="skills-tags" id="skillsTags"></div>
+            <input type="hidden" id="skills">
+          </div>
+        </div>
+        <div class="field-group">
+          <label>Experience (Years)</label>
+          <input type="number" id="experience" placeholder="e.g. 4" min="0" max="50">
+        </div>
+        <div class="field-group">
+          <label>Application Date</label>
+          <input type="date" id="applicationDate">
+        </div>
+        <div class="field-group field-full">
+          <label>Resume Link (Google Drive URL)</label>
+          <input type="url" id="resume" placeholder="https://drive.google.com/file/...">
+        </div>
+      </div>
+      <div class="step-nav">
+        <button type="button" class="btn-back" onclick="goToStep(1)">← Back</button>
+        <button type="button" class="btn-next" onclick="goToStep(3)">Next: Interview →</button>
+      </div>
+    </section>
+
+    <!-- Step 3 -->
+    <section class="form-section" id="step3">
+      <div class="section-header">
+        <div class="section-icon-wrap">🎯</div>
+        <div>
+          <h2 class="section-title">Interview Tracking</h2>
+          <p class="section-sub">Status, rounds & evaluation</p>
+        </div>
+      </div>
+      <div class="grid-2">
+        <div class="field-group">
+          <label>Interview Status</label>
+          <div class="status-buttons" id="interviewStatusBtns">
+            <button type="button" class="status-btn pending active" data-value="Pending" onclick="setStatus(this,'interviewStatus')">⏳ Pending</button>
+            <button type="button" class="status-btn selected" data-value="Selected" onclick="setStatus(this,'interviewStatus')">✅ Selected</button>
+            <button type="button" class="status-btn rejected" data-value="Rejected" onclick="setStatus(this,'interviewStatus')">❌ Rejected</button>
+          </div>
+          <input type="hidden" id="interviewStatus" value="Pending">
+        </div>
+        <div class="field-group">
+          <label>Offer Letter Sent?</label>
+          <div class="toggle-wrap">
+            <label class="toggle">
+              <input type="checkbox" id="offerSentToggle">
+              <span class="toggle-slider"></span>
+            </label>
+            <span class="toggle-text" id="offerSentText">Not Sent</span>
+            <input type="hidden" id="offerSent" value="No">
+          </div>
+        </div>
+        <div class="field-group">
+          <label>Interview Round</label>
+          <select id="interviewRound">
+            <option value="">Select Round</option>
+            <option>HR Screening</option><option>Technical Round 1</option>
+            <option>Technical Round 2</option><option>Managerial Round</option>
+            <option>Final Round</option>
+          </select>
+        </div>
+        <div class="field-group">
+          <label>Candidate Selected?</label>
+          <div class="toggle-wrap">
+            <label class="toggle">
+              <input type="checkbox" id="selectedToggle">
+              <span class="toggle-slider"></span>
+            </label>
+            <span class="toggle-text" id="selectedText">No</span>
+            <input type="hidden" id="selected" value="No">
+          </div>
+        </div>
+        <div class="field-group field-full">
+          <label>HR Remarks</label>
+          <textarea id="remarks" placeholder="Add notes about the candidate..."></textarea>
+        </div>
+      </div>
+      <div class="step-nav">
+        <button type="button" class="btn-back" onclick="goToStep(2)">← Back</button>
+        <button type="button" class="btn-next" onclick="goToStep(4)">Next: Onboarding →</button>
+      </div>
+    </section>
+
+    <!-- Step 4 -->
+    <section class="form-section" id="step4">
+      <div class="section-header">
+        <div class="section-icon-wrap">🚀</div>
+        <div>
+          <h2 class="section-title">Employee Onboarding</h2>
+          <p class="section-sub">Final package & joining details</p>
+        </div>
+      </div>
+      <div class="grid-2">
+        <div class="field-group">
+          <label>Date of Joining</label>
+          <input type="date" id="joiningDate">
+        </div>
+        <div class="field-group">
+          <label>Employment Type</label>
+          <select id="employmentType">
+            <option>Full-time</option><option>Intern</option>
+            <option>Contract</option><option>Part-time</option>
+          </select>
+        </div>
+        <div class="field-group">
+          <label>Work Location</label>
+          <input type="text" id="workLocation" placeholder="e.g. Mumbai / Remote / Hybrid">
+        </div>
+        <div class="field-group">
+          <label>Salary Package (LPA)</label>
+          <div class="salary-wrap">
+            <span class="salary-prefix">₹</span>
+            <input type="text" id="salary" placeholder="e.g. 12 LPA">
+          </div>
+        </div>
+      </div>
+      <div class="summary-card" id="summaryCard">
+        <h3>📋 Submission Summary</h3>
+        <div class="summary-grid" id="summaryGrid"></div>
+      </div>
+      <div class="step-nav">
+        <button type="button" class="btn-back" onclick="goToStep(3)">← Back</button>
+        <button type="submit" class="btn-submit" id="submitBtn">
+          <span id="btnText">💾 Save to Google Sheets</span>
+          <span id="btnLoader" class="btn-loader hidden">Saving…</span>
+        </button>
+      </div>
+    </section>
+
+  </form>
+
+  <div class="toast" id="toast">
+    <span class="toast-icon">🎉</span>
+    <span id="toastMsg">Employee saved successfully!</span>
+  </div>
+
+</div>
+
+<script>
+/* ════════════════════════════════════════
+   CANVAS BACKGROUND — Flowing aurora mesh
+   ════════════════════════════════════════ */
+(function(){
+  const canvas=document.getElementById('bgCanvas');
+  const ctx=canvas.getContext('2d');
+  let W,H,t=0;
+  const orbs=[
+    {x:.15,y:.2,r:.38,c:[79,70,229],vx:.00012,vy:.00008},
+    {x:.8,y:.7,r:.42,c:[124,58,237],vx:-.0001,vy:.00015},
+    {x:.5,y:.5,r:.3,c:[14,165,233],vx:.00008,vy:-.00012},
+    {x:.1,y:.8,r:.25,c:[16,185,129],vx:.00015,vy:-.0001},
+    {x:.85,y:.15,r:.28,c:[244,63,94],vx:-.00009,vy:.00013},
+  ];
+  function resize(){W=canvas.width=innerWidth;H=canvas.height=innerHeight}
+  resize();
+  window.addEventListener('resize',resize);
+
+  /* mouse attract */
+  let mx=W/2,my=H/2;
+  document.addEventListener('mousemove',e=>{mx=e.clientX;my=e.clientY});
+
+  function draw(){
+    ctx.clearRect(0,0,W,H);
+    t+=.003;
+    orbs.forEach((o,i)=>{
+      const ox=Math.sin(t*1.1+i*1.3)*0.06;
+      const oy=Math.cos(t*.9+i*1.7)*0.06;
+      const ax=(mx/W-.5)*.04;
+      const ay=(my/H-.5)*.04;
+      o.x+=o.vx+ax*.002;
+      o.y+=o.vy+ay*.002;
+      if(o.x<-0.1)o.x=1.1;if(o.x>1.1)o.x=-0.1;
+      if(o.y<-0.1)o.y=1.1;if(o.y>1.1)o.y=-0.1;
+      const cx=(o.x+ox)*W;
+      const cy=(o.y+oy)*H;
+      const rad=o.r*Math.max(W,H);
+      const g=ctx.createRadialGradient(cx,cy,0,cx,cy,rad);
+      const [r,gv,b]=o.c;
+      g.addColorStop(0,`rgba(${r},${gv},${b},.18)`);
+      g.addColorStop(.4,`rgba(${r},${gv},${b},.08)`);
+      g.addColorStop(1,`rgba(${r},${gv},${b},0)`);
+      ctx.beginPath();
+      ctx.arc(cx,cy,rad,0,Math.PI*2);
+      ctx.fillStyle=g;ctx.fill();
+    });
+    requestAnimationFrame(draw);
+  }
+  draw();
+})();
+
+/* ════════════════════════════════════════
+   FLOATING PARTICLES
+   ════════════════════════════════════════ */
+(function(){
+  const container=document.getElementById('particles');
+  const colors=['rgba(99,102,241,.5)','rgba(139,92,246,.4)','rgba(20,184,166,.3)','rgba(251,191,36,.3)'];
+  for(let i=0;i<18;i++){
+    const p=document.createElement('div');
+    p.className='particle';
+    const size=Math.random()*3+1;
+    p.style.cssText=`
+      width:${size}px;height:${size}px;
+      left:${Math.random()*100}%;
+      bottom:-${Math.random()*20}%;
+      background:${colors[Math.floor(Math.random()*colors.length)]};
+      animation-duration:${8+Math.random()*12}s;
+      animation-delay:${Math.random()*8}s;
+    `;
+    container.appendChild(p);
+  }
+})();
+
+/* ════════════════════════════════════════
+   SCRIPT URL
+   ════════════════════════════════════════ */
+// ⚠️ PASTE YOUR NEW GOOGLE APPS SCRIPT WEB APP URL HERE after deploying the Apps Script below
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxuU6n4cOxJBHFFOYONBlkAgOHNXthpQToas6R7LyTEX1ES58RzDP-QmV1KAhtE340/exec";
+
+/* ════════════════════════════════════════
+   STEP NAVIGATION
+   ════════════════════════════════════════ */
+let currentStep=1;const totalSteps=4;
+
+function goToStep(step){
+  if(step>currentStep&&!validateStep(currentStep))return;
+  document.getElementById(`step${currentStep}`).classList.remove('active');
+  document.getElementById(`step${step}`).classList.add('active');
+  currentStep=step;
+  updateProgress();
+  if(step===4)buildSummary();
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+
+function updateProgress(){
+  for(let i=1;i<=4;i++){
+    const sc=document.getElementById(`sc${i}`);
+    const si=document.querySelector(`.step-item[data-step="${i}"]`);
+    sc.className='step-circle';
+    si.classList.remove('active');
+    if(i<currentStep){sc.classList.add('done');sc.textContent='✓'}
+    else if(i===currentStep){sc.classList.add('active');sc.textContent=i;si.classList.add('active')}
+    else{sc.textContent=i}
+  }
+  for(let i=1;i<=3;i++){
+    const c=document.getElementById(`conn${i}`);
+    c.classList.toggle('filled',i<currentStep);
+  }
+}
+
+/* ════════════════════════════════════════
+   VALIDATION
+   ════════════════════════════════════════ */
+function validateStep(step){
+  let valid=true;
+  const rules={
+    1:[
+      {id:'name',errId:'nameErr',msg:'Full name is required.'},
+      {id:'email',errId:'emailErr',msg:'Valid email is required.',pattern:/^[^\s@]+@[^\s@]+\.[^\s@]+$/},
+      {id:'phone',errId:'phoneErr',msg:'Phone number is required.'},
+    ],
+    2:[{id:'position',errId:'positionErr',msg:'Position is required.'}]
+  };
+  if(rules[step]){
+    rules[step].forEach(rule=>{
+      const el=document.getElementById(rule.id);
+      const err=document.getElementById(rule.errId);
+      const val=el.value.trim();
+      const failed=!val||(rule.pattern&&!rule.pattern.test(val));
+      el.classList.toggle('invalid',failed);
+      err.textContent=failed?rule.msg:'';
+      if(failed)valid=false;
+    });
+  }
+  return valid;
+}
+
+['name','email','phone','position'].forEach(id=>{
+  const el=document.getElementById(id);
+  if(el)el.addEventListener('input',()=>{
+    el.classList.remove('invalid');
+    const e=document.getElementById(id+'Err');
+    if(e)e.textContent='';
+  });
+});
+
+/* ════════════════════════════════════════
+   SKILLS TAG INPUT
+   ════════════════════════════════════════ */
+let skillsList=[];
+document.getElementById('skillInput').addEventListener('keydown',function(e){
+  if(e.key==='Enter'||e.key===','){
+    e.preventDefault();
+    const val=this.value.trim().replace(/,+$/,'');
+    if(val&&!skillsList.includes(val)){skillsList.push(val);renderSkills()}
+    this.value='';
+  }
+});
+function renderSkills(){
+  document.getElementById('skillsTags').innerHTML=skillsList.map((s,i)=>`
+    <span class="skill-tag">${s}<button type="button" onclick="removeSkill(${i})">×</button></span>
+  `).join('');
+  document.getElementById('skills').value=skillsList.join(', ');
+}
+function removeSkill(i){skillsList.splice(i,1);renderSkills()}
+
+/* ════════════════════════════════════════
+   STATUS BUTTONS
+   ════════════════════════════════════════ */
+function setStatus(btn,hiddenId){
+  btn.closest('.status-buttons').querySelectorAll('.status-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById(hiddenId).value=btn.dataset.value;
+}
+
+/* ════════════════════════════════════════
+   TOGGLE SWITCHES
+   ════════════════════════════════════════ */
+function setupToggle(checkboxId,textId,hiddenId,onText,offText){
+  const chk=document.getElementById(checkboxId);
+  const txt=document.getElementById(textId);
+  const hid=document.getElementById(hiddenId);
+  chk.addEventListener('change',()=>{
+    txt.textContent=chk.checked?onText:offText;
+    hid.value=chk.checked?'Yes':'No';
+  });
+}
+setupToggle('offerSentToggle','offerSentText','offerSent','Sent ✓','Not Sent');
+setupToggle('selectedToggle','selectedText','selected','Yes ✓','No');
+
+/* ════════════════════════════════════════
+   SAME ADDRESS
+   ════════════════════════════════════════ */
+document.getElementById('sameAddress').addEventListener('change',function(){
+  const perm=document.getElementById('permanentAddress');
+  if(this.checked){
+    perm.value=document.getElementById('currentAddress').value;
+    perm.setAttribute('readonly',true);
+    perm.style.opacity='.5';
+  }else{
+    perm.removeAttribute('readonly');perm.style.opacity='';
+  }
+});
+document.getElementById('currentAddress').addEventListener('input',function(){
+  if(document.getElementById('sameAddress').checked)
+    document.getElementById('permanentAddress').value=this.value;
+});
+
+/* ════════════════════════════════════════
+   SUMMARY
+   ════════════════════════════════════════ */
+function buildSummary(){
+  const fields=[
+    ['Name','name'],['Email','email'],['Phone','phone'],
+    ['Position','position'],['Department','department'],
+    ['Experience','experience','yrs'],
+    ['Interview Status','interviewStatus'],
+    ['Interview Round','interviewRound'],
+    ['Offer Sent','offerSent'],['Employment Type','employmentType'],
+    ['Work Location','workLocation'],['Salary','salary'],
+  ];
+  document.getElementById('summaryGrid').innerHTML=fields.map(([label,id,suffix])=>{
+    const val=document.getElementById(id)?.value||'—';
+    return `<div class="summary-item">
+      <div class="s-label">${label}</div>
+      <div class="s-val">${val||'—'}${val&&suffix?' '+suffix:''}</div>
+    </div>`;
+  }).join('');
+}
+
+/* ════════════════════════════════════════
+   FORM SUBMIT
+   ════════════════════════════════════════ */
+document.getElementById('hrForm').addEventListener('submit',async function(e){
+  e.preventDefault();
+  if(!validateStep(currentStep))return;
+  const btnText=document.getElementById('btnText');
+  const btnLoader=document.getElementById('btnLoader');
+  const submitBtn=document.getElementById('submitBtn');
+  btnText.classList.add('hidden');btnLoader.classList.remove('hidden');submitBtn.disabled=true;
+  const data={
+    timestamp:new Date().toLocaleString('en-IN'),
+    name:getValue('name'),email:getValue('email'),phone:getValue('phone'),
+    gender:getValue('gender'),dob:getValue('dob'),
+    currentAddress:getValue('currentAddress'),permanentAddress:getValue('permanentAddress'),
+    position:getValue('position'),department:getValue('department'),
+    skills:getValue('skills'),experience:getValue('experience'),
+    resume:getValue('resume'),applicationDate:getValue('applicationDate'),
+    interviewStatus:getValue('interviewStatus'),interviewRound:getValue('interviewRound'),
+    selected:getValue('selected'),remarks:getValue('remarks'),offerSent:getValue('offerSent'),
+    joiningDate:getValue('joiningDate'),employmentType:getValue('employmentType'),
+    workLocation:getValue('workLocation'),salary:getValue('salary'),
+  };
+  try{
+    await fetch(SCRIPT_URL,{method:'POST',mode:'no-cors',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});
+    showToast('🎉 Employee saved to Google Sheets!');
+    document.getElementById('hrForm').reset();
+    skillsList=[];renderSkills();
+    document.getElementById('offerSentText').textContent='Not Sent';
+    document.getElementById('selectedText').textContent='No';
+    document.getElementById('offerSent').value='No';
+    document.getElementById('selected').value='No';
+    goToStep(1);
+  }catch(err){
+    showToast('❌ Error saving. Check your Script URL.',true);
+  }finally{
+    btnText.classList.remove('hidden');btnLoader.classList.add('hidden');submitBtn.disabled=false;
+  }
+});
+
+function getValue(id){return document.getElementById(id)?.value?.trim()||''}
+
+/* ════════════════════════════════════════
+   TOAST
+   ════════════════════════════════════════ */
+function showToast(msg,isError=false){
+  const toast=document.getElementById('toast');
+  document.getElementById('toastMsg').textContent=msg;
+  toast.style.borderColor=isError?'rgba(244,63,94,.3)':'rgba(16,185,129,.3)';
+  toast.classList.add('show');
+  setTimeout(()=>toast.classList.remove('show'),4000);
+}
+
+/* Default date */
+document.getElementById('applicationDate').valueAsDate=new Date();
+</script>
+</body>
+</html>
